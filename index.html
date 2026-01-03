@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>OmniConvert | Universal Unit Converter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="https://picsum.photos/192/192">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    
+    :root {
+      --primary-gradient: linear-gradient(to right, #2563eb, #22d3ee);
+      --accent-color: #22d3ee;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      background-color: #020617;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar { display: none; }
+    
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .theme-transition { transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    .panel-slide {
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+    }
+
+    .category-active {
+      background-image: var(--primary-gradient);
+      color: white;
+      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    }
+
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.95); }
+    }
+    .animate-pulse-subtle { animation: pulse-subtle 3s infinite ease-in-out; }
+
+    select option {
+      background-color: #0f172a;
+      color: white;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body class="text-white min-h-screen overflow-hidden theme-transition">
+
+  <!-- Main App Shell -->
+  <div id="app" class="fixed inset-0 flex flex-col theme-transition">
+    
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center gap-6 transition-opacity duration-500">
+      <div class="w-16 h-16 rounded-3xl bg-blue-500 animate-spin" id="loader-icon"></div>
+      <div class="text-center">
+        <h2 class="text-xl font-bold tracking-tight">OneTap Convert</h2>
+        <p class="text-sm text-white/40">Calibrating instruments...</p>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="px-6 pt-12 pb-4 flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+          <span id="header-dot" class="w-3 h-3 rounded-full animate-pulse-subtle"></span>
+          OneTap Convert
+        </h1>
+        <p class="text-[10px] text-white/40 font-bold tracking-[0.2em] uppercase">Universal Edition</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="history-toggle" class="p-2.5 glass rounded-full hover:bg-white/10 active:scale-95 transition-all">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </button>
+        <div class="flex bg-white/5 rounded-full p-1 border border-white/10" id="theme-selector"></div>
+      </div>
+    </header>
+
+    <!-- Categories -->
+    <nav class="px-6 pb-6 overflow-x-auto custom-scrollbar">
+      <div class="flex gap-2 min-w-max" id="category-tabs"></div>
+    </nav>
+
+    <!-- Converter -->
+    <main class="flex-1 px-6 overflow-y-auto custom-scrollbar">
+      <div class="max-w-md mx-auto space-y-4 pb-12">
+        
+        <!-- Input Card 1 -->
+        <div class="glass rounded-3xl p-6 transition-transform duration-300">
+          <div class="flex justify-between items-center mb-4">
+            <select id="unit-1" class="bg-transparent text-lg font-bold outline-none cursor-pointer max-w-[220px] appearance-none"></select>
+            <button onclick="copyValue('input-1')" class="text-white/30 hover:text-white transition-colors p-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+            </button>
+          </div>
+          <input type="number" id="input-1" step="any" class="w-full bg-transparent text-5xl font-bold outline-none" placeholder="0">
+        </div>
+
+        <!-- Swap -->
+        <div class="flex justify-center -my-6 relative z-10">
+          <button id="swap-btn" class="p-4 rounded-full shadow-2xl hover:scale-110 active:scale-90 transition-all duration-500">
+            <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+          </button>
+        </div>
+
+        <!-- Input Card 2 -->
+        <div class="glass rounded-3xl p-6 pt-10 transition-transform duration-300">
+          <div class="flex justify-between items-center mb-4">
+            <select id="unit-2" class="bg-transparent text-lg font-bold outline-none cursor-pointer max-w-[220px] appearance-none"></select>
+            <button onclick="copyValue('input-2')" class="text-white/30 hover:text-white transition-colors p-1">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+            </button>
+          </div>
+          <input type="number" id="input-2" step="any" class="w-full bg-transparent text-5xl font-bold outline-none" placeholder="0">
+        </div>
+
+        <div class="pt-4 flex justify-between items-center text-[10px] font-bold text-white/40 uppercase tracking-widest">
+          <span id="footer-status">High Precision Engine</span>
+          <button id="save-history" class="hover:text-cyan-400 transition-colors">Save To History</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- History Panel -->
+    <div id="history-panel" class="absolute inset-0 z-50 flex flex-col bg-slate-950/95 backdrop-blur-2xl translate-y-full panel-slide opacity-0 pointer-events-none">
+      <div class="p-6 flex justify-between items-center border-b border-white/5">
+        <h2 class="text-xl font-bold">History</h2>
+        <button id="history-close" class="p-2 glass rounded-full active:scale-90 transition-transform">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div id="history-list" class="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar"></div>
+      <div class="p-6">
+        <button id="history-clear" class="w-full py-4 glass rounded-2xl text-red-400 font-bold hover:bg-red-400/10 active:scale-95 transition-all">Clear All History</button>
+      </div>
+    </div>
+
+    <footer class="h-8 shrink-0"></footer>
+  </div>
+
+  <script>
+    // --- Comprehensive Unit Data ---
+    const CATEGORIES = ['Length', 'Weight', 'Temperature', 'Area', 'Volume', 'Speed', 'Currency'];
+    
+    const THEMES = {
+      Midnight: { primary: 'linear-gradient(to right, #2563eb, #22d3ee)', accent: '#22d3ee', bg: 'bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950' },
+      DeepPurple: { primary: 'linear-gradient(to right, #9333ea, #ec4899)', accent: '#f472b6', bg: 'bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950' },
+      Forest: { primary: 'linear-gradient(to right, #059669, #34d399)', accent: '#34d399', bg: 'bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-950' },
+      Charcoal: { primary: 'linear-gradient(to right, #3f3f46, #bef264)', accent: '#bef264', bg: 'bg-gradient-to-br from-slate-950 via-zinc-900 to-slate-950' }
+    };
+
+    const UNITS = {
+      Length: [
+        { l: 'Nanometers (nm)', v: 'nm', f: 1e-9 },
+        { l: 'Micrometers (μm)', v: 'um', f: 1e-6 },
+        { l: 'Millimeters (mm)', v: 'mm', f: 0.001 },
+        { l: 'Centimeters (cm)', v: 'cm', f: 0.01 },
+        { l: 'Decimeters (dm)', v: 'dm', f: 0.1 },
+        { l: 'Meters (m)', v: 'm', f: 1 },
+        { l: 'Dekameters (dam)', v: 'dam', f: 10 },
+        { l: 'Hectometers (hm)', v: 'hm', f: 100 },
+        { l: 'Kilometers (km)', v: 'km', f: 1000 },
+        { l: 'Inches (in)', v: 'in', f: 0.0254 },
+        { l: 'Feet (ft)', v: 'ft', f: 0.3048 },
+        { l: 'Yards (yd)', v: 'yd', f: 0.9144 },
+        { l: 'Miles (mi)', v: 'mi', f: 1609.344 },
+        { l: 'Nautical Miles (nmi)', v: 'nmi', f: 1852 }
+      ],
+      Weight: [
+        { l: 'Micrograms (μg)', v: 'ug', f: 1e-9 },
+        { l: 'Milligrams (mg)', v: 'mg', f: 1e-6 },
+        { l: 'Grams (g)', v: 'g', f: 0.001 },
+        { l: 'Kilograms (kg)', v: 'kg', f: 1 },
+        { l: 'Metric Tons (t)', v: 't', f: 1000 },
+        { l: 'Ounces (oz)', v: 'oz', f: 0.0283495 },
+        { l: 'Pounds (lb)', v: 'lb', f: 0.453592 },
+        { l: 'Stones (st)', v: 'st', f: 6.35029 },
+        { l: 'US Tons (short)', v: 'ust', f: 907.185 },
+        { l: 'Imperial Tons (long)', v: 'it', f: 1016.05 }
+      ],
+      Temperature: [
+        { l: 'Celsius (°C)', v: 'C' },
+        { l: 'Fahrenheit (°F)', v: 'F' },
+        { l: 'Kelvin (K)', v: 'K' },
+        { l: 'Rankine (°Ra)', v: 'Ra' }
+      ],
+      Area: [
+        { l: 'Sq Millimeters (mm²)', v: 'sqmm', f: 1e-6 },
+        { l: 'Sq Centimeters (cm²)', v: 'sqcm', f: 0.0001 },
+        { l: 'Sq Meters (m²)', v: 'sqm', f: 1 },
+        { l: 'Sq Kilometers (km²)', v: 'sqkm', f: 1000000 },
+        { l: 'Sq Inches (in²)', v: 'sqin', f: 0.00064516 },
+        { l: 'Sq Feet (ft²)', v: 'sqft', f: 0.092903 },
+        { l: 'Sq Yards (yd²)', v: 'sqyd', f: 0.836127 },
+        { l: 'Acres (ac)', v: 'ac', f: 4046.86 },
+        { l: 'Hectares (ha)', v: 'ha', f: 10000 },
+        { l: 'Sq Miles (mi²)', v: 'sqmi', f: 2589988.11 }
+      ],
+      Volume: [
+        { l: 'Milliliters (ml)', v: 'ml', f: 0.001 },
+        { l: 'Liters (l)', v: 'l', f: 1 },
+        { l: 'Cubic Meters (m³)', v: 'cbm', f: 1000 },
+        { l: 'US Teaspoons', v: 'tsp', f: 0.00492892 },
+        { l: 'US Tablespoons', v: 'tbsp', f: 0.0147868 },
+        { l: 'US Fluid Ounces', v: 'floz', f: 0.0295735 },
+        { l: 'US Cups', v: 'cup', f: 0.24 },
+        { l: 'US Pints', v: 'pt', f: 0.473176 },
+        { l: 'US Quarts', v: 'qt', f: 0.946353 },
+        { l: 'US Gallons', v: 'gal', f: 3.78541 },
+        { l: 'Imperial Gallons', v: 'igal', f: 4.54609 },
+        { l: 'Cubic Inches (in³)', v: 'cuin', f: 0.0163871 },
+        { l: 'Cubic Feet (ft³)', v: 'cuft', f: 28.3168 }
+      ],
+      Speed: [
+        { l: 'Meters/Second (m/s)', v: 'ms', f: 1 },
+        { l: 'Kilometers/Hour (km/h)', v: 'kmh', f: 0.277778 },
+        { l: 'Miles/Hour (mph)', v: 'mph', f: 0.44704 },
+        { l: 'Knots (kn)', v: 'kn', f: 0.514444 },
+        { l: 'Feet/Second (ft/s)', v: 'fts', f: 0.3048 },
+        { l: 'Mach (at sea level)', v: 'mach', f: 340.29 }
+      ],
+      Currency: [
+        { l: 'USD - US Dollar', v: 'USD' },
+        { l: 'EUR - Euro', v: 'EUR' },
+        { l: 'GBP - British Pound', v: 'GBP' },
+        { l: 'INR - Indian Rupee', v: 'INR' },
+        { l: 'JPY - Japanese Yen', v: 'JPY' },
+        { l: 'CNY - Chinese Yuan', v: 'CNY' },
+        { l: 'AUD - Australian Dollar', v: 'AUD' },
+        { l: 'CAD - Canadian Dollar', v: 'CAD' },
+        { l: 'CHF - Swiss Franc', v: 'CHF' },
+        { l: 'HKD - Hong Kong Dollar', v: 'HKD' },
+        { l: 'NZD - New Zealand Dollar', v: 'NZD' },
+        { l: 'SGD - Singapore Dollar', v: 'SGD' },
+        { l: 'KRW - South Korean Won', v: 'KRW' },
+        { l: 'MXN - Mexican Peso', v: 'MXN' },
+        { l: 'BRL - Brazilian Real', v: 'BRL' },
+        { l: 'ZAR - South African Rand', v: 'ZAR' }
+      ]
+    };
+
+    // --- Application State ---
+    let state = {
+      category: localStorage.getItem('omni_cat') || 'Length',
+      theme: localStorage.getItem('omni_theme') || 'Midnight',
+      unit1: '',
+      unit2: '',
+      val1: '1',
+      val2: '0',
+      rates: JSON.parse(localStorage.getItem('omni_rates')) || null,
+      history: JSON.parse(localStorage.getItem('omni_history')) || []
+    };
+
+    // --- Business Logic ---
+    const format = (num) => {
+      if (num === 0) return '0';
+      const str = num.toFixed(8);
+      return parseFloat(str).toString(); // Truncates trailing zeros properly
+    };
+
+    const convert = (val, from, to, cat) => {
+      if (from === to) return val;
+      const num = parseFloat(val);
+      if (isNaN(num)) return 0;
+
+      if (cat === 'Currency' && state.rates) {
+        const fromRate = state.rates.rates[from];
+        const toRate = state.rates.rates[to];
+        return (num / fromRate) * toRate;
+      }
+
+      if (cat === 'Temperature') {
+        let c = 0;
+        // Normalize to Celsius
+        if (from === 'C') c = num;
+        else if (from === 'F') c = (num - 32) * 5/9;
+        else if (from === 'K') c = num - 273.15;
+        else if (from === 'Ra') c = (num - 491.67) * 5/9;
+
+        // Convert to target
+        if (to === 'C') return c;
+        if (to === 'F') return c * 9/5 + 32;
+        if (to === 'K') return c + 273.15;
+        if (to === 'Ra') return (c + 273.15) * 9/5;
+        return 0;
+      }
+
+      const u1 = UNITS[cat].find(u => u.v === from);
+      const u2 = UNITS[cat].find(u => u.v === to);
+      if (!u1 || !u2) return 0;
+      return (num * u1.f) / u2.f;
+    };
+
+    // --- UI Rendering ---
+    const updateTheme = (name) => {
+      state.theme = name;
+      localStorage.setItem('omni_theme', name);
+      const t = THEMES[name];
+      document.body.className = `text-white min-h-screen overflow-hidden theme-transition ${t.bg}`;
+      document.documentElement.style.setProperty('--primary-gradient', t.primary);
+      document.documentElement.style.setProperty('--accent-color', t.accent);
+      document.getElementById('swap-btn').style.backgroundImage = t.primary;
+      document.getElementById('header-dot').style.backgroundColor = t.accent;
+      document.getElementById('loader-icon').style.backgroundImage = t.primary;
+      renderThemeSelector();
+      renderCategories();
+    };
+
+    const renderThemeSelector = () => {
+      const container = document.getElementById('theme-selector');
+      container.innerHTML = Object.keys(THEMES).map(name => `
+        <button onclick="updateTheme('${name}')" 
+          class="w-6 h-6 rounded-full transition-all duration-300 ${state.theme === name ? 'scale-110 border-2 border-white' : 'scale-75 opacity-40'}" 
+          style="background: ${THEMES[name].primary}">
+        </button>
+      `).join('');
+    };
+
+    const renderCategories = () => {
+      const container = document.getElementById('category-tabs');
+      container.innerHTML = CATEGORIES.map(cat => `
+        <button onclick="changeCategory('${cat}')" 
+          class="px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 whitespace-nowrap ${state.category === cat ? 'category-active' : 'bg-white/5 text-white/40 hover:bg-white/10'}">
+          ${cat}
+        </button>
+      `).join('');
+    };
+
+    const changeCategory = (cat) => {
+      state.category = cat;
+      localStorage.setItem('omni_cat', cat);
+      const available = UNITS[cat];
+      
+      const u1Select = document.getElementById('unit-1');
+      const u2Select = document.getElementById('unit-2');
+      const opts = available.map(u => `<option value="${u.v}">${u.l}</option>`).join('');
+      u1Select.innerHTML = opts;
+      u2Select.innerHTML = opts;
+      
+      // Default selections
+      state.unit1 = available[0].v;
+      state.unit2 = available[available.length > 1 ? 1 : 0].v;
+      u1Select.value = state.unit1;
+      u2Select.value = state.unit2;
+      
+      const status = document.getElementById('footer-status');
+      if (cat === 'Currency' && state.rates) {
+        status.textContent = `Rates: ${new Date(state.rates.timestamp).toLocaleTimeString()}`;
+      } else {
+        status.textContent = `High Precision Engine (${available.length} Units)`;
+      }
+
+      recalculate(1);
+      renderCategories();
+    };
+
+    const recalculate = (side) => {
+      const u1 = document.getElementById('unit-1').value;
+      const u2 = document.getElementById('unit-2').value;
+      const input1 = document.getElementById('input-1');
+      const input2 = document.getElementById('input-2');
+      
+      if (side === 1) {
+        input2.value = format(convert(input1.value, u1, u2, state.category));
+      } else {
+        input1.value = format(convert(input2.value, u2, u1, state.category));
+      }
+    };
+
+    const toggleHistory = (show) => {
+      const panel = document.getElementById('history-panel');
+      if (show) {
+        renderHistoryList();
+        panel.classList.remove('translate-y-full', 'opacity-0', 'pointer-events-none');
+      } else {
+        panel.classList.add('translate-y-full', 'opacity-0', 'pointer-events-none');
+      }
+    };
+
+    const renderHistoryList = () => {
+      const list = document.getElementById('history-list');
+      if (state.history.length === 0) {
+        list.innerHTML = `<div class="flex flex-col items-center justify-center h-full opacity-20"><p>No recent conversions</p></div>`;
+        return;
+      }
+      list.innerHTML = state.history.map((h, i) => `
+        <div class="glass rounded-2xl p-4 flex justify-between items-center group">
+          <div class="flex-1">
+            <div class="text-[10px] text-white/30 uppercase font-bold tracking-tighter mb-1">${h.cat}</div>
+            <div class="font-semibold text-sm truncate pr-4">
+              ${h.v1} <span class="text-xs font-normal text-white/50">${h.u1}</span> 
+              <span class="mx-1" style="color: var(--accent-color)">→</span> 
+              ${h.v2} <span class="text-xs font-normal text-white/50">${h.u2}</span>
+            </div>
+          </div>
+          <button onclick="restoreHistory(${i})" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+        </div>
+      `).join('');
+    };
+
+    const restoreHistory = (index) => {
+      const h = state.history[index];
+      changeCategory(h.cat);
+      document.getElementById('unit-1').value = h.u1;
+      document.getElementById('unit-2').value = h.u2;
+      document.getElementById('input-1').value = h.v1;
+      document.getElementById('input-2').value = h.v2;
+      recalculate(1);
+      toggleHistory(false);
+    };
+
+    window.copyValue = (id) => {
+      const el = document.getElementById(id);
+      navigator.clipboard.writeText(el.value);
+      const original = el.style.color;
+      el.style.color = 'var(--accent-color)';
+      setTimeout(() => el.style.color = original, 600);
+    };
+
+    // --- Core Lifecycle ---
+    const init = async () => {
+      updateTheme(state.theme);
+      changeCategory(state.category);
+      
+      // Load currency rates
+      try {
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        const data = await res.json();
+        if (data.result === 'success') {
+          state.rates = { rates: data.rates, timestamp: Date.now() };
+          localStorage.setItem('omni_rates', JSON.stringify(state.rates));
+          if (state.category === 'Currency') changeCategory('Currency');
+        }
+      } catch (e) { console.warn("Working offline: rates restricted to cached version."); }
+
+      // Finish loading
+      const loader = document.getElementById('loading-overlay');
+      loader.classList.add('opacity-0');
+      setTimeout(() => loader.remove(), 500);
+    };
+
+    // --- Events ---
+    document.getElementById('input-1').addEventListener('input', () => recalculate(1));
+    document.getElementById('input-2').addEventListener('input', () => recalculate(2));
+    document.getElementById('unit-1').addEventListener('change', () => recalculate(1));
+    document.getElementById('unit-2').addEventListener('change', () => recalculate(1));
+    
+    document.getElementById('swap-btn').addEventListener('click', () => {
+      const u1 = document.getElementById('unit-1');
+      const u2 = document.getElementById('unit-2');
+      const v1 = document.getElementById('input-1');
+      const v2 = document.getElementById('input-2');
+      const tempU = u1.value;
+      u1.value = u2.value;
+      u2.value = tempU;
+      v1.value = v2.value;
+      recalculate(1);
+    });
+
+    document.getElementById('history-toggle').addEventListener('click', () => toggleHistory(true));
+    document.getElementById('history-close').addEventListener('click', () => toggleHistory(false));
+    document.getElementById('history-clear').addEventListener('click', () => {
+      state.history = [];
+      localStorage.removeItem('omni_history');
+      renderHistoryList();
+    });
+
+    document.getElementById('save-history').addEventListener('click', () => {
+      const u1 = document.getElementById('unit-1').value;
+      const u2 = document.getElementById('unit-2').value;
+      const v1 = document.getElementById('input-1').value;
+      const v2 = document.getElementById('input-2').value;
+      
+      const entry = {
+        cat: state.category,
+        u1, u2, v1, v2,
+        time: Date.now()
+      };
+      
+      state.history = [entry, ...state.history].slice(0, 50);
+      localStorage.setItem('omni_history', JSON.stringify(state.history));
+      
+      const btn = document.getElementById('save-history');
+      btn.textContent = "Saved!";
+      setTimeout(() => btn.textContent = "Save to History", 1500);
+    });
+
+    // Start
+    init();
+  </script>
+
+<footer>@ 2026 All rights reserved. Created by Samar Jeet Jamwal<footer>
+</body>
+</html>
